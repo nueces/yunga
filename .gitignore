@@ -1,0 +1,7 @@
+.idea
+vault/
+logs/
+infraestructure/plan.out
+iinfraestructure/plan.log
+infraestructure/.terraform/
+

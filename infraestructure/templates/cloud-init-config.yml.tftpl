@@ -1,0 +1,85 @@
+#cloud-config
+
+users:
+  - name: ubuntu
+    homedir: /home/ubuntu
+    shell: /bin/bash
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    ssh_authorized_keys:
+      - ${project_public_key}
+
+  - name: ansible
+    homedir: /home/ansible
+    shell: /bin/bash
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    ssh_authorized_keys:
+      - ${project_public_key}
+
+packages:
+  - python3-venv
+
+# First approach:
+#  Pro:
+#  - easy to use?
+#  Cons:
+#  - The ansible version that is  available in the distro is too old and not supported by some community plugins.
+#  - The run_user does not seem to work.
+#
+#ansible:
+#  install_method: distro
+#  package_name: ansible
+#  run_user: ansible
+#  pull:
+#    accept_host_key: true
+#    url: "https://${git_username}:${git_token}@${git_repository_url}"
+#    playbook_name: "playbooks/${ansible_role}.yml"
+#
+
+# Second approach:
+#  Pro:
+#  - a bit more clear that running all the commands with runcmd.
+#  - the ansible-pull.sh script can be reused later.
+#  Cons:
+#  - The files are created correctly according to the logs.
+#    But the files are not present when the runcmd step is executed.
+#
+#write_files:
+#  - path: /home/ansible/bootstrap.sh
+#    defer: true
+#    permissions: 0700
+#    owner: ansible
+#    content: |
+#      #!/usr/bin/env bash
+#      set -euxo pipefail
+#
+#      python3 -m venv $${HOME}/venv
+#      $${HOME}/venv/bin/pip install ansible
+#
+#  - path: /home/ansible/ansible-pull.sh
+#    defer: true
+#    owner: ansible
+#    permissions: 0700
+#    content: |
+#      #!/usr/bin/env bash
+#      set -euxo pipefail
+#
+#      $${HOME}/venv/bin/ansible-pull --accept-host-key \
+#        --url="https://${git_username}:${git_token}@${git_repository_url}" \
+#        --directory=\"$${HOME}/ansible-pull\" \
+#        --extra-vars=\"venv_path=$${HOME}/venv\" \
+#         playbooks/${ansible_role}.yml
+#
+#runcmd:
+#  - sudo -u ansible /home/ansible/bootstrap.sh
+#  - sudo -u ansible /home/ansible/ansible-pull.sh
+
+# FIXME: Remove hardcoded paths referencing the home, venv, etc.
+runcmd:
+      - sudo -u ansible python3 -m venv /home/ansible/venv
+      - sudo -u ansible /home/ansible/venv/bin/pip install ansible
+      - |
+        sudo -u ansible /home/ansible/venv/bin/ansible-pull --accept-host-key \
+          --url="https://${git_username}:${git_token}@${git_repository_url}" \
+          --directory=/home/ansible/ansible-pull \
+          --extra-vars='venv_bin_path=/home/ansible/venv/bin' \
+          playbooks/${ansible_role}.yml

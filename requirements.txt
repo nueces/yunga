@@ -1,0 +1,4 @@
+boto3~=1.26.149
+botocore~=1.29.149
+python-hcl2
+pyyaml
