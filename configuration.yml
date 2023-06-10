@@ -8,8 +8,9 @@ data_device_name: /dev/sdf
 git:
   username: coati
   token_filename: deploy_token
-  repository_url: gitlab.com/jungle.ai/yungas.git
+  repository_url: gitlab.com/jungle.ai/yunga.git
 
 # to be prefixed with the account_id and region ex: 123456789012-eu-central-1-terraform-backend-yunga
 terraform:
   backend_bucket: terraform-backend-yunga
+
