@@ -7,7 +7,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "887012142425-eu-central-1-terraform-backend-yunga"
+    bucket = "362616634943-eu-central-1-terraform-backend-yunga"
     key    = "infrastructure.tfstate"
     region = "eu-central-1"
   }

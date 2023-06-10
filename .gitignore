@@ -1,5 +1,6 @@
 .idea
 vault/
+vault/deploy_token
 venv/
 logs/
 infrastructure/plan.out
