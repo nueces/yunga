@@ -2,7 +2,7 @@
 vault/
 venv/
 logs/
-infraestructure/plan.out
-infraestructure/plan.log
-infraestructure/.terraform/
+infrastructure/plan.out
+infrastructure/plan.log
+infrastructure/.terraform/
 

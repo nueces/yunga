@@ -59,14 +59,14 @@ pip-uninstall: ##@ Uninstall python dependencies using pip.
 
 .PHONY: deploy
 deploy: ##@ Deploy infrastructure running terraform.
-	$(info >>> For more specific terraform related targets. Execute `make help` in the infraestructure directory)
-	make -C infraestructure deploy
+	$(info >>> For more specific terraform related targets. Execute `make help` in the `infrastructure` directory)
+	make -C infrastructure deploy
 
 
 .PHONY: destroy
 destroy: ##@ Destroy infrastructure running terraform.
-	$(info >>> For more specific terraform related targets. Execute `make help` in the infraestructure directory)
-	make -C infraestructure destroy
+	$(info >>> For more specific terraform related targets. Execute `make help` in the `infrastructure` directory)
+	make -C infrastructure destroy
 
 ##@
 ##@ The following targets are not availables, and needs to be re implemented.
