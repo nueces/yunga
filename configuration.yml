@@ -1,10 +1,13 @@
 # The idea of this configuration file is to be a single source of truth for the bootstrap script, ansible and terraform.
 project_name: Yunga
 aws_region: eu-central-1
+# If the keypair already exist the bootstrap script would not create a new one.
+# I assume that the team has a way to share this kind of secrets in a secure manner.
 keypair_name: yunga
 vault_path: vault
 data_device_name: /dev/sdf
 
+# the deployment token needs to be created in gitlab.
 git:
   username: coati
   token_filename: deploy_token
@@ -13,4 +16,3 @@ git:
 # to be prefixed with the account_id and region ex: 123456789012-eu-central-1-terraform-backend-yunga
 terraform:
   backend_bucket: terraform-backend-yunga
-

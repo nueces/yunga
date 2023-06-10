@@ -1,5 +1,27 @@
 # Yunga
 
+## Configuration
+The `configuration.yml` file contains a set of values that can be used to configure the `bootstrap` and `deployment` process.
+```yaml
+# The idea of this configuration file is to be a single source of truth for the bootstrap script, ansible and terraform.
+project_name: Yunga
+aws_region: eu-central-1
+# If the keypair already exist the bootstrap script would not create a new one.
+# I assume that the team has a way to share this kind of secrets in a secure manner.
+keypair_name: yunga
+vault_path: vault
+data_device_name: /dev/sdf
+
+# the deployment token needs to be created in gitlab.
+git:
+  username: coati
+  token_filename: deploy_token
+  repository_url: gitlab.com/jungle.ai/yunga.git
+
+# to be prefixed with the account_id and region ex: 123456789012-eu-central-1-terraform-backend-yunga
+terraform:
+  backend_bucket: terraform-backend-yunga
+```
 
 ## Bootstrap
 The bootstrap target creates a set following set of resources:
