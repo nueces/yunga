@@ -1,0 +1,12 @@
+---
+
+- name: frontend playbook
+  hosts: localhost
+  become: true
+
+  pre_tasks:
+    - name: Include pre task
+      ansible.builtin.include_tasks: pre_tasks.yml
+
+  roles:
+    - frontend

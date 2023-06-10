@@ -1,0 +1,11 @@
+---
+
+- name: Create and start services
+  community.docker.docker_compose:
+    project_name: frontend
+    project_src: docker/frontend
+  register: docker_creation
+
+- name: debug docker creation
+  ansible.builtin.debug:
+    var: docker_creation

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # This container bind the port 9100 directly in the host
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+
+  # nginx, just for testing
+  web:
+    image: nginx
+    ports:
+      - 80:80

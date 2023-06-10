@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # This container bind the port 9100 directly in the host
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+
+  # This bind the port 9090 directly in the host
+  prometheus:
+    image: quay.io/prometheus/prometheus:latest
+    container_name: prometheus
+    network_mode: host
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "/data/prometheus:/prometheus"
+
+  # FIXME: remove hardcoded passwords
+  db:
+    image: postgres:latest
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - "/data/postgresql:/var/lib/postgresql/data"
+      #- ./create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql

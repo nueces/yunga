@@ -1,0 +1,17 @@
+---
+
+- name: PRE_TASK | Install python dependencies via pip.
+  ansible.builtin.command:
+    cmd: "{{venv_bin_path}}/pip install --requirement requirements.txt"
+  tags:
+    - ansible
+    - bootstrap
+    - collections
+
+- name: PRE_TASK | Install collection dependencies via ansible-galaxy.
+  ansible.builtin.command:
+    cmd: "{{venv_bin_path}}/ansible-galaxy collection install --requirement requirements.yml"
+  tags:
+    - ansible
+    - bootstrap
+    - collections
