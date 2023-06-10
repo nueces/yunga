@@ -12,11 +12,12 @@ endef
 
 
 # Packages installed in the virtualenv place their commands in the bin directory inside virtualenv path.
-VENV_PATH=$(or $VIRTUAL_ENV, "venv")
+VENV_PATH=$(or ${VIRTUAL_ENV}, "venv")
 # prefix all commands with virtualenv bin path
 ANSIBLE_GALAXY = ${VENV_PATH}/bin/ansible-galaxy
 ANSIBLE_PLAYBOOK = ${VENV_PATH}/bin/ansible-playbook
 ANSIBLE_PULL = ${VENV_PATH}/bin/ansible-pull
+PYTHON = ${VENV_PATH}/bin/python3
 
 PIP = ${VENV_PATH}/bin/pip
 
@@ -25,39 +26,63 @@ help: ##@ Show this help.
 	@$(usage)
 
 .PHONY: bootstrap
-bootstrap: ##@ Create the virtualenv to run pip-install, and galaxy-play targets.
+bootstrap: ##@ Create the virtualenv to run pip-install target.
 	rm -rfv ${VENV_PATH}
-	virtualenv ${VENV_PATH}
+	python3 -m venv ${VENV_PATH}
 	# Install ansible and python dependencies
-	@$(MAKE) pip-install galaxy-install
+	@$(MAKE) pip-install
+	${PYTHON} utils/bootstrap.py
+
 
 .PHONY: pip-install
 pip-install: ##@ Install python dependencies using pip.
 	${PIP} install --requirement requirements.txt
 
+
 .PHONY: pip-upgrade
 pip-upgrade: ##@ Upgrade python dependencies using pip. This ignore pinning versions in requirements.txt.
 	${PIP} install --upgrade $(shell sed -e '/^[a-zA-Z0-9\._-]/!d; s/=.*$$//' requirements.txt)
 
+
 .PHONY: pip-freeze
-pip-freeze: ##@ Like pip freeze but only for packages that are in requirements.txt. This doesn't include any package that could be present in the virtualenv as result of manual installs or resolved dependencies.
+pip-freeze:##@ Like pip freeze but only for packages that are in requirements.txt.
+##@		This doesn't include any package that could be present in the virtualenv
+##@		as result of manual installs or resolved dependencies.
 	REQ="$(shell ${PIP} freeze --quiet --requirement requirements.txt | sed '/^## The following requirements were added by pip freeze:$$/,$$ d')";\
 	echo $$REQ | sed 's/ /\n/g' > requirements.txt
+
 
 .PHONY: pip-uninstall
 pip-uninstall: ##@ Uninstall python dependencies using pip.
 	${PIP}  pip uninstall --yes --requirement requirements.txt
 
-galaxy-install: playbooks/requirements.yml ##@ Install ansible modules using ansible-galaxy.
-	${ANSIBLE_GALAXY} collection install --requirement playbooks/requirements.yml
 
+.PHONY: deploy
+deploy: ##@ Deploy infrastructure running terraform.
+	$(info >>> For more specific terraform related targets. Execute `make help` in the infraestructure directory)
+	make -C infraestructure deploy
+
+
+.PHONY: destroy
+destroy: ##@ Destroy infrastructure running terraform.
+	$(info >>> For more specific terraform related targets. Execute `make help` in the infraestructure directory)
+	make -C infraestructure destroy
+
+##@
+##@ The following targets are not availables, and needs to be re implemented.
+##@ =========================================================================
+##@
 # TODO: Simulate ansible-pull behaviour with ansible-playbook for speed up local development. Vagrant?
+#
+#galaxy-install: playbooks/requirements.yml ##@ Install ansible modules using ansible-galaxy.
+#	${ANSIBLE_GALAXY} collection install --requirement playbooks/requirements.yml
+#
 #.PHONY: play
 #play: galaxy-up ##@ Run ansible-playbook.
 #	${ANSIBLE_PLAYBOOK} playbooks/${TARGET}.yml
 #
 #.PHONY: debug
-#debug: ##@ Run ansible-playbook, running only plays and tasks tagged with 'debug'.
+#debug: ##@ Run ansible-playbook, but only plays and tasks tagged with 'debug'.
 #	${ANSIBLE_PLAYBOOK} playbook.yml --tags debug
 #.PHONY: debug
 #debug:
@@ -68,7 +93,7 @@ galaxy-install: playbooks/requirements.yml ##@ Install ansible modules using ans
 ## TODO: Validate TARGET and REPO_URL
 ##
 #.PHONY: ansible-pull
-#ansible-pull: ##@ Run ansible-pull. Note that this command make a new checkout in the ${HOME}/ansible-pull
+#ansible-pull: ##@ Run ansible-pull. Note that this command make a new checkout in the path: ${HOME}/ansible-pull
 #	@echo ${ANSIBLE_PULL} --accept-host-key --url=${REPO_URL} --directory ${HOME}/ansible-pull --extra-vars \"venv_path=${VENV_PATH}\" playbooks/${TARGET}.yml
 #
 

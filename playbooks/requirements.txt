@@ -1,3 +1,5 @@
+# This files contains the python pakages requirements for the ansible collections.
+# This packages are installed in the instances via a pre_task in the playbooks.
 requests
 docker
 docker-compose

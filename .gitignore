@@ -1,7 +1,8 @@
 .idea
 vault/
+venv/
 logs/
 infraestructure/plan.out
-iinfraestructure/plan.log
+infraestructure/plan.log
 infraestructure/.terraform/
 
