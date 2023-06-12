@@ -2,31 +2,73 @@
 # the infrastructure provisioning is made in the .pre stage that is always the first one before any other stage.
 # If there are changes in the infrastructure run the application jobs too.
 
+include: .gitlab-ci-terraform.yml  # Copied from https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Terraform/Base.gitlab-ci.yml
+
+variables:
+  TF_ROOT: infrastructure
+  TF_INIT_FLAGS: -lockfile=readonly
+
+
+stages:
+  - validate
+  - build
+  - deploy-infrastructure
+  - cleanup
+  - deploy-application
+
 # Infrastructure
-deploy-prod-infrastructure:
-  stage: .pre
+# When whe should trigger an infrastructure deployment
+.infrastructure: &infrastructure-configuration
   tags:
     - terraform
     - infrastructure
-    - production
-  environment: production
-  variables:
-    TF_INIT_FLAGS: -lockfile=readonly
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $TF_AUTO_DEPLOY == "true"
       changes:
         - infrastructure
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      changes:
+        - infrastructure
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - infrastructure
+
+# stage: validate
+fmt:
+  <<: *infrastructure-configuration
+  extends: .terraform:fmt
+  needs: []
+
+validate:
+  <<: *infrastructure-configuration
+  extends: .terraform:validate
+  needs: []
+
+# stage: build
+build:
+  <<: *infrastructure-configuration
+  extends: .terraform:build
+  environment:
+    name: $TF_STATE_NAME
+    action: prepare
+
+
+deploy-infrastructure:
+  <<: *infrastructure-configuration
+  extends: .terraform:deploy
+  dependencies:
+    - build
+  environment:
+    name: production
+    action: start
   before_script:
     - echo "Deploying $CI_COMMIT_BRANCH branch to build the infrastructure."
 
-  # FIXME:
-  script:
-    - AWS_KEYS... make deploy
-
 
 # Applications deploy are basically the same, only change the TIER and path to watch for modifications
-.deploy-application-prod:
-  stage: application
+.deploy-application:
+  stage: deploy-application
   environment: production
   tags:
     - ansible-pull
@@ -50,20 +92,20 @@ deploy-prod-infrastructure:
 
 
 # Application backend
-deploy-prod-backend:
-  extends: .deploy-application-prod
+deploy-backend:
+  extends: .deploy-application
   tags:
-    - !reference [.deploy-application-prod, tags]
+    - !reference [.deploy-application, tags]
     - backend
   variables:
     TIER: backend
 
 
 # Application frontend
-deploy-prod-frontend:
-  extends: .deploy-application-prod
+deploy-frontend:
+  extends: .deploy-application
   tags:
-    - !reference [.deploy-application-prod, tags]
+    - !reference [.deploy-application, tags]
     - frontend
   variables:
     TIER: frontend
