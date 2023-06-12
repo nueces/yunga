@@ -1,0 +1,79 @@
+# If there are changes in the infrastructure and playbooks, run the job in two different stages.
+# the infrastructure provisioning is made in the .pre stage that is always the first one before any other stage.
+# If there are changes in the infrastructure run the application jobs too.
+
+# Infrastructure
+deploy-prod-infrastructure:
+  stage: .pre
+  tags:
+    - terraform
+    - infrastructure
+  environment: production
+  variables:
+    TF_INIT_FLAGS: -lockfile=readonly
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - infrastructure
+  before_script:
+    - echo "Deploying $CI_COMMIT_BRANCH branch to build the infrastructure."
+
+  # FIXME:
+  script:
+    - AWS_KEYS... make deploy
+
+
+# Applications deploy are basically the same, only change the TIER and path to watch for modifications
+.deploy-application:
+  when: never
+  tags:
+    - ansible-pull
+    - application
+  before_script:
+        - echo "Deploying $CI_COMMIT_BRANCH branch to $TIER; "commit $CI_COMMIT_SHA; job $CI_JOB_URL"
+  script:
+    - sudo -u ansible /home/ansible/venv/bin/ansible-pull --accept-host-key --clean \
+      --url="$CI_REPOSITORY_URL" \
+      --directory=/home/ansible/ansible-pull-ci \
+      --extra-vars='venv_bin_path=/home/ansible/venv/bin' \
+      playbooks/$TIER.yml
+
+
+# Application backend
+deploy-prod-backend:
+  stage: application
+  tags:
+    - !reference [.deploy-application, tags]
+    - backend
+  environment: production
+  variables:
+    TIER: backend
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - infrastructure
+        - playbooks/$TIER.yml
+        - playbooks/roles/common
+        - playbooks/roles/$TIER
+  script:
+    - !reference [.deploy-application, script]
+
+
+# Application frontend
+deploy-prod-frontend:
+  stage: application
+  tags:
+    - !reference [.deploy-application, tags]
+    - frontend
+  environment: production
+  variables:
+    TIER: frontend
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - infrastructure
+        - playbooks/$TIER.yml
+        - playbooks/roles/common
+        - playbooks/roles/$TIER
+  script:
+    - !reference [.deploy-application, script]
