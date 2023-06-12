@@ -5,70 +5,37 @@
 include: .gitlab-ci-terraform.yml  # Copied from https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Terraform/Base.gitlab-ci.yml
 
 variables:
+  TF_AUTO_DEPLOY: "true"
   TF_ROOT: infrastructure
+  TF_NAME: production
   TF_INIT_FLAGS: -lockfile=readonly
-
 
 stages:
   - validate
   - build
-  - deploy-infrastructure
+  - deploy:infrastructure
+  - deploy:applications
   - cleanup
-  - deploy-application
 
+##############################################################################
 # Infrastructure
 # When whe should trigger an infrastructure deployment
+
 .infrastructure: &infrastructure-configuration
+  environment: production
   tags:
     - terraform
     - infrastructure
   rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $TF_AUTO_DEPLOY == "true"
-      changes:
-        - infrastructure
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: manual
-      changes:
-        - infrastructure
-    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
-      changes:
-        - infrastructure
+    - changes:
+        - infrastructure/**/*
 
-# stage: validate
-fmt:
-  <<: *infrastructure-configuration
-  extends: .terraform:fmt
-  needs: []
+##############################################################################
+# Applications deploy are basically the same, We only change the TIER and
+# path to watch for modifications
 
-validate:
-  <<: *infrastructure-configuration
-  extends: .terraform:validate
-  needs: []
-
-# stage: build
-build:
-  <<: *infrastructure-configuration
-  extends: .terraform:build
-  environment:
-    name: $TF_STATE_NAME
-    action: prepare
-
-
-deploy-infrastructure:
-  <<: *infrastructure-configuration
-  extends: .terraform:deploy
-  dependencies:
-    - build
-  environment:
-    name: production
-    action: start
-  before_script:
-    - echo "Deploying $CI_COMMIT_BRANCH branch to build the infrastructure."
-
-
-# Applications deploy are basically the same, only change the TIER and path to watch for modifications
 .deploy-application:
-  stage: deploy-application
+  stage: deploy:applications
   environment: production
   tags:
     - ansible-pull
@@ -77,10 +44,10 @@ deploy-infrastructure:
   rules:
     - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
       changes:
-        - infrastructure
+        - infrastructure/**/*
         - playbooks/$TIER.yml
-        - playbooks/roles/common
-        - playbooks/roles/$TIER
+        - playbooks/roles/common/**/*
+        - playbooks/roles/$TIER/**/*
   before_script:
         - echo "Deploying $CI_COMMIT_BRANCH branch to $TIER; "commit $CI_COMMIT_SHA; job $CI_JOB_URL"
   script:
@@ -91,8 +58,59 @@ deploy-infrastructure:
       playbooks/$TIER.yml
 
 
+##############################################################################
+## STAGE: validate
+
+terraform:fmt:
+  <<: *infrastructure-configuration
+  extends: .terraform:fmt
+  needs: []
+
+terraform:validate:
+  <<: *infrastructure-configuration
+  extends: .terraform:validate
+  needs: []
+
+
+##############################################################################
+## STAGE: build
+
+terraform:build:
+  <<: *infrastructure-configuration
+  extends: .terraform:build
+  environment:
+    name: $TF_STATE_NAME
+    action: prepare
+
+
+##############################################################################
+## STAGE: deploy-infrastructure
+
+terraform:deploy:
+  <<: *infrastructure-configuration
+  extends: .terraform:deploy
+  stage: deploy:infrastructure
+  dependencies:
+    - build
+  environment:
+    name: production
+    action: start
+  before_script:
+    - echo "Deploying $CI_COMMIT_BRANCH branch to build the infrastructure."
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $TF_AUTO_DEPLOY == "true"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - infrastructure/**/*
+
+
+##############################################################################
+## STAGE: deploy-applications
+
 # Application backend
-deploy-backend:
+application:backend:deploy:
   extends: .deploy-application
   tags:
     - !reference [.deploy-application, tags]
@@ -100,12 +118,21 @@ deploy-backend:
   variables:
     TIER: backend
 
-
 # Application frontend
-deploy-frontend:
+application:frontend:deploy:
   extends: .deploy-application
   tags:
     - !reference [.deploy-application, tags]
     - frontend
   variables:
     TIER: frontend
+
+
+##############################################################################
+## STAGE: cleanup
+
+terraform:destroy:
+  <<: *infrastructure-configuration
+  extends: .terraform:destroy
+  needs: []
+  when: manual
