@@ -113,7 +113,9 @@ terraform:deploy:
 application:backend:deploy:
   extends: .deploy-application
   tags:
-    - !reference [.deploy-application, tags]
+    - ansible-pull
+    - application
+    - production
     - backend
   variables:
     TIER: backend
@@ -122,7 +124,9 @@ application:backend:deploy:
 application:frontend:deploy:
   extends: .deploy-application
   tags:
-    - !reference [.deploy-application, tags]
+    - ansible-pull
+    - application
+    - production
     - frontend
   variables:
     TIER: frontend
