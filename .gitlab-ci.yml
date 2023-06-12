@@ -25,10 +25,16 @@ deploy-prod-infrastructure:
 
 # Applications deploy are basically the same, only change the TIER and path to watch for modifications
 .deploy-application:
-  when: never
   tags:
     - ansible-pull
     - application
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - infrastructure
+        - playbooks/$TIER.yml
+        - playbooks/roles/common
+        - playbooks/roles/$TIER
   before_script:
         - echo "Deploying $CI_COMMIT_BRANCH branch to $TIER; "commit $CI_COMMIT_SHA; job $CI_JOB_URL"
   script:
@@ -49,12 +55,9 @@ deploy-prod-backend:
   variables:
     TIER: backend
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
-      changes:
-        - infrastructure
-        - playbooks/$TIER.yml
-        - playbooks/roles/common
-        - playbooks/roles/$TIER
+    - !reference [.deploy-application, rules]
+  before_script:
+    - !reference [.deploy-application, before_script]
   script:
     - !reference [.deploy-application, script]
 
@@ -69,11 +72,8 @@ deploy-prod-frontend:
   variables:
     TIER: frontend
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
-      changes:
-        - infrastructure
-        - playbooks/$TIER.yml
-        - playbooks/roles/common
-        - playbooks/roles/$TIER
+    - !reference [.deploy-application, rules]
+  before_script:
+    - !reference [.deploy-application, before_script]
   script:
     - !reference [.deploy-application, script]
