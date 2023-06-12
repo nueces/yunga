@@ -8,6 +8,7 @@ deploy-prod-infrastructure:
   tags:
     - terraform
     - infrastructure
+    - production
   environment: production
   variables:
     TF_INIT_FLAGS: -lockfile=readonly
@@ -24,11 +25,13 @@ deploy-prod-infrastructure:
 
 
 # Applications deploy are basically the same, only change the TIER and path to watch for modifications
-.deploy-application: &deploy-application
+.deploy-application-prod:
   stage: application
+  environment: production
   tags:
     - ansible-pull
     - application
+    - production
   rules:
     - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
       changes:
@@ -48,21 +51,19 @@ deploy-prod-infrastructure:
 
 # Application backend
 deploy-prod-backend:
-  <<: *deploy-application
+  extends: .deploy-application-prod
   tags:
-    - !reference [.deploy-application, tags]
+    - !reference [.deploy-application-prod, tags]
     - backend
-  environment: production
   variables:
     TIER: backend
 
 
 # Application frontend
 deploy-prod-frontend:
-  <<: *deploy-application
+  extends: .deploy-application-prod
   tags:
-    - !reference [.deploy-application, tags]
+    - !reference [.deploy-application-prod, tags]
     - frontend
-  environment: production
   variables:
     TIER: frontend
