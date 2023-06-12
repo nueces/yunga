@@ -4,6 +4,8 @@ vault/deploy_token
 venv/
 logs/
 infrastructure/plan.out
+infrastructure/plan.cache
 infrastructure/plan.log
+infrastructure/*.tfstate
 infrastructure/.terraform/
 

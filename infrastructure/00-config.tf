@@ -6,11 +6,8 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket = "362616634943-eu-central-1-terraform-backend-yunga"
-    key    = "infrastructure.tfstate"
-    region = "eu-central-1"
-  }
+  # Use gitlab http storage as a backend. All the configuration option are passed via envvars.
+  backend "http" {}
 }
 
 provider "aws" {
