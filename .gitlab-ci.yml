@@ -91,7 +91,7 @@ terraform:deploy:
   extends: .terraform:deploy
   stage: deploy:infrastructure
   dependencies:
-    - build
+    - terraform:build
   environment:
     name: production
     action: start
