@@ -20,7 +20,7 @@ def yamlconfig(filepath: Path, config_key: str) -> str:
     Usage examples:
 
     # First lets create a simple yaml file
-    >>> content = b'''map:
+    >>> content = '''map:
     ...   name: fruits
     ...   items:
     ...     - apple
@@ -32,12 +32,12 @@ def yamlconfig(filepath: Path, config_key: str) -> str:
     ...     tomato: 6\
     '''
 
-    # We need a file to create a Path object
-    >>> import tempfile, os
-    >>> file_yaml = tempfile.NamedTemporaryFile(delete=False)
-    >>> file_yaml.write(content); file_yaml.close()  # doctest: +ELLIPSIS
-    1...
-    >>> file_path = Path(file_yaml.name)
+    # We need to create a Path like object to use in the body function.
+    >>> from io import StringIO
+    >>> file_path = StringIO(content)
+
+    # Patch the read_text method and rewind the IOStream to simulate the same behaviour that the desired function.
+    >>> file_path.read_text = lambda : file_path.read() if [file_path.seek(0)] else None
 
     # Now lets start with the examples
     >>> yamlconfig(file_path, 'map.name')
@@ -57,9 +57,6 @@ def yamlconfig(filepath: Path, config_key: str) -> str:
     ...
     KeyError: 'lemons'
 
-    # Remove the yaml file used for the test.
-    >>> os.remove(file_path)
-
     """
     config = yaml.safe_load(filepath.read_text())
     keys = config_key.split(".")
@@ -78,6 +75,9 @@ def main() -> int:
     """
     Main function to interface with the yamlconfig function.
     :return: Int: The return value is a valid POSIX exit code.
+
+
+    # TODO: Write doctest
     """
     logging.basicConfig(format=f'%(asctime)s:{sys.argv[0]}:%(message)s')
     # TODO: Use argparse to get the argument values.
