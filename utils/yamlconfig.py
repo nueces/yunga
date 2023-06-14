@@ -5,9 +5,7 @@ yamlconfig read a yml file and return the value for a specific 'key' or 'key.pat
 import json
 import logging
 import sys
-
 from pathlib import Path
-
 
 import yaml
 

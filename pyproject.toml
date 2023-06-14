@@ -1,0 +1,16 @@
+[tool.black]
+line-length = 120
+
+
+[tool.isort]
+atomic = true
+profile = "black"
+line_length = 120
+
+
+[tool.pylint]
+max-line-length = 120
+disable = [
+  # Disable error for TODO and FIXME notes.
+  "W0511",
+]

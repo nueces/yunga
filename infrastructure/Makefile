@@ -5,10 +5,11 @@ PYTHON=../venv/bin/python
 YAMLCONFIG=${PYTHON} ../utils/yamlconfig.py ../configuration.yml
 
 PROJECT_NAME:=$(shell ${YAMLCONFIG} project_name | tr '[:upper:]' '[:lower:]')
+TF_STATE_NAME=$(shell ${YAMLCONFIG} terraform.state_name)
 PROJECT_ID:=$(shell ${YAMLCONFIG} git.project_id)
 TF_USERNAME:=$(shell ${YAMLCONFIG} git.username)
 TF_PASSWORD:=$(shell cat "../$(shell ${YAMLCONFIG} vault_path)/$(shell ${YAMLCONFIG} git.token_filename)")
-TF_ADDRESS="https://gitlab.com/api/v4/projects/${PROJECT_ID}/terraform/state/${PROJECT_NAME}"
+TF_ADDRESS="https://gitlab.com/api/v4/projects/${PROJECT_ID}/terraform/state/${TF_STATE_NAME}"
 
 ifdef targets
 options := $(foreach target,$(targets),-target $(target))
@@ -43,7 +44,6 @@ init: ##@ Run terraform init.
 
 .PHONY: migrate-state
 migrate-state: ##@ Run terraform init -migrate-state.
-##@		This command creates a local backup for the tfstate file and migrate the backend to a new location.
 	terraform --version
 	terraform init -migrate-state \
 	  -backend-config=address=${TF_ADDRESS} \
