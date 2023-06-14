@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
+yamlconfig read a yml file and return the value for a specific 'key' or 'key.path'.
 """
-import logging
-import sys
-import yaml
 import json
 import logging
+import sys
 
 from pathlib import Path
+
+
+import yaml
+
 
 def yamlconfig(filepath: Path, config_key: str) -> str:
     """
@@ -79,8 +82,8 @@ def main() -> int:
 
     # TODO: Write doctest
     """
-    logging.basicConfig(format=f'%(asctime)s:{sys.argv[0]}:%(message)s')
-    # TODO: Use argparse to get the argument values.
+    logging.basicConfig(format=f"%(asctime)s:{sys.argv[0]}:%(message)s")
+    # FIXME: Use argparse to get the argument values.
 
     errors = []
     filepath = None
@@ -88,7 +91,7 @@ def main() -> int:
 
     try:
         filename = sys.argv[1]
-    except IndexError as exe:
+    except IndexError:
         errors.append(logging.error("'filepath' for the configuration file must be provided."))
     else:
         filepath = Path(filename)
