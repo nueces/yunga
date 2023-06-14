@@ -9,13 +9,57 @@ import logging
 
 from pathlib import Path
 
-
 def yamlconfig(filepath: Path, config_key: str) -> str:
     """
+    Read the <filepath> yaml file and return the value for <config_key>.
+    :param filepath: Path: yaml file
+    :param config_key: String: key to be read. If it contains a dot, then it would be treated as an attribute.
+    :return: String: A string containing a simple value or a json representation of the python object in any other case
+        like list or dicts.
 
-    :param filepath: Path:
-    :param key: String:
-    :return: String:
+    Usage examples:
+
+    # First lets create a simple yaml file
+    >>> content = b'''map:
+    ...   name: fruits
+    ...   items:
+    ...     - apple
+    ...     - orange
+    ...     - tomato
+    ...   amounts:
+    ...     apple: 2
+    ...     orange: 4
+    ...     tomato: 6\
+    '''
+
+    # We need a file to create a Path object
+    >>> import tempfile, os
+    >>> file_yaml = tempfile.NamedTemporaryFile(delete=False)
+    >>> file_yaml.write(content); file_yaml.close()  # doctest: +ELLIPSIS
+    1...
+    >>> file_path = Path(file_yaml.name)
+
+    # Now lets start with the examples
+    >>> yamlconfig(file_path, 'map.name')
+    'fruits'
+
+    >>> yamlconfig(file_path, 'map.items')
+    '["apple", "orange", "tomato"]'
+
+    >>> yamlconfig(file_path, 'map.amounts')
+    '{"apple": 2, "orange": 4, "tomato": 6}'
+
+    >>> yamlconfig(file_path, 'map.amounts.tomato')
+    '6'
+
+    >>> yamlconfig(file_path, 'map.amounts.lemons')
+    Traceback (most recent call last):
+    ...
+    KeyError: 'lemons'
+
+    # Remove the yaml file used for the test.
+    >>> os.remove(file_path)
+
     """
     config = yaml.safe_load(filepath.read_text())
     keys = config_key.split(".")
@@ -32,7 +76,7 @@ def yamlconfig(filepath: Path, config_key: str) -> str:
 
 def main() -> int:
     """
-    Simple main function to interface with the yamlconfig function.
+    Main function to interface with the yamlconfig function.
     :return: Int: The return value is a valid POSIX exit code.
     """
     logging.basicConfig(format=f'%(asctime)s:{sys.argv[0]}:%(message)s')
