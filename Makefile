@@ -10,16 +10,29 @@ define usage
 	@echo "\n"
 endef
 
+# Configurations
+UTILS=utils
+INFRASTRUCTURE=infrastructure
+PLAYBOOKS=playbooks
 
 # Packages installed in the virtualenv place their commands in the bin directory inside virtualenv path.
-VENV_PATH=$(or ${VIRTUAL_ENV}, "venv")
-# prefix all commands with virtualenv bin path
-ANSIBLE_GALAXY = ${VENV_PATH}/bin/ansible-galaxy
-ANSIBLE_PLAYBOOK = ${VENV_PATH}/bin/ansible-playbook
-ANSIBLE_PULL = ${VENV_PATH}/bin/ansible-pull
-PYTHON = ${VENV_PATH}/bin/python3
+# So we are going to prefix all commands with virtualenv bin path.
+VENV_PATH = $(or ${VIRTUAL_ENV}, "venv")
 
-PIP = ${VENV_PATH}/bin/pip
+# Ansible
+ANSIBLE_GALAXY   = ${VENV_PATH}/bin/ansible-galaxy
+ANSIBLE_PLAYBOOK = ${VENV_PATH}/bin/ansible-playbook
+ANSIBLE_PULL     = ${VENV_PATH}/bin/ansible-pull
+ANSIBLE_LINT     = ${VENV_PATH}/bin/ansible-lint
+
+# python commands
+PYTHON = ${VENV_PATH}/bin/python3
+PIP    = ${VENV_PATH}/bin/pip
+BLACK  = ${VENV_PATH}/bin/black
+ISORT  = ${VENV_PATH}/bin/isort
+PYLINT = ${VENV_PATH}/bin/pylint
+
+#############################################################################
 
 .PHONY: help
 help: ##@ Show this help.
@@ -57,26 +70,54 @@ pip-uninstall: ##@ Uninstall python dependencies using pip.
 	${PIP}  pip uninstall --yes --requirement requirements.txt
 
 
+galaxy-install: playbooks/requirements.yml ##@ Install ansible modules using ansible-galaxy.
+	${ANSIBLE_GALAXY} collection install --requirement playbooks/requirements.yml
+
+
 .PHONY: deploy
 deploy: ##@ Deploy infrastructure running terraform.
-	$(info >>> For more specific terraform related targets. Execute `make help` in the `infrastructure` directory)
-	make -C infrastructure deploy
+	$(info >>> For more specific terraform related targets. Execute `make help` in the ${INFRASTRUCTURE} directory)
+	make -C ${INFRASTRUCTURE} deploy
 
 
 .PHONY: destroy
 destroy: ##@ Destroy infrastructure running terraform.
-	$(info >>> For more specific terraform related targets. Execute `make help` in the `infrastructure` directory)
-	make -C infrastructure destroy
+	$(info >>> For more specific terraform related targets. Execute `make help` in the ${INFRASTRUCTURE} directory)
+	make -C ${INFRASTRUCTURE} destroy
+
+
+#TODO: Set the exclude in the pyproject.toml file.
+.PHONY: ansible-lint
+ansible-lint: galaxy-install ##@Run linting tools for Ansible code in the ${PLAYBOOKS} directory.
+	@echo Running Ansible linting tools.
+	${ANSIBLE_LINT} ${PLAYBOOKS} --exclude=${PLAYBOOKS}/requirements.yml || echo "[MASK ERROR]"
+
+
+.PHONY: python-lint
+python-lint: ##@ Run linting tools for python code in the ${UTILS_SRC} directory.
+	@echo Running Python linting tools.
+	${BLACK} ${UTILS}
+	${ISORT} ${UTILS}
+	${PYLINT} ${UTILS}
+
+
+.PHONY: terraform-lint
+terraform-lint: ##@Run linting tools for terraform code in the ${INFRASTRUCTURE} directory.
+	@echo Running Terraform linting tools.
+	make -C ${INFRASTRUCTURE} fmt validate
+
+
+.PHONY: lint
+lint: ansible-lint python-lint terraform-lint ##@ Run linting tools for Ansible, Python and Terraform code.
+	@echo Lint done!
+
 
 ##@
 ##@ The following targets are not availables, and needs to be re implemented.
 ##@ =========================================================================
 ##@
 # TODO: Simulate ansible-pull behaviour with ansible-playbook for speed up local development. Vagrant?
-#
-#galaxy-install: playbooks/requirements.yml ##@ Install ansible modules using ansible-galaxy.
-#	${ANSIBLE_GALAXY} collection install --requirement playbooks/requirements.yml
-#
+
 #.PHONY: play
 #play: galaxy-up ##@ Run ansible-playbook.
 #	${ANSIBLE_PLAYBOOK} playbooks/${TARGET}.yml

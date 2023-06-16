@@ -1,6 +1,16 @@
 # Makefile
 .DEFAULT_GOAL:=help
 
+PYTHON=../venv/bin/python
+YAMLCONFIG=${PYTHON} ../utils/yamlconfig.py ../configuration.yml
+
+PROJECT_NAME:=$(shell ${YAMLCONFIG} project_name | tr '[:upper:]' '[:lower:]')
+TF_STATE_NAME=$(shell ${YAMLCONFIG} terraform.state_name)
+PROJECT_ID:=$(shell ${YAMLCONFIG} git.project_id)
+TF_USERNAME:=$(shell ${YAMLCONFIG} git.username)
+TF_PASSWORD:=$(shell cat "../$(shell ${YAMLCONFIG} vault_path)/$(shell ${YAMLCONFIG} git.token_filename)")
+TF_ADDRESS="https://gitlab.com/api/v4/projects/${PROJECT_ID}/terraform/state/${TF_STATE_NAME}"
+
 ifdef targets
 options := $(foreach target,$(targets),-target $(target))
 endif
@@ -22,7 +32,28 @@ help: ##@ Show this help.
 .PHONY: init
 init: ##@ Run terraform init.
 	terraform --version
-	terraform init
+	terraform init \
+	  -backend-config=address=${TF_ADDRESS} \
+	  -backend-config=lock_address=${TF_ADDRESS}/lock \
+	  -backend-config=unlock_address=${TF_ADDRESS}/lock \
+	  -backend-config=username=${TF_USERNAME} \
+	  -backend-config=password=${TF_PASSWORD} \
+	  -backend-config=lock_method=POST \
+	  -backend-config=unlock_method=DELETE \
+	  -backend-config=retry_wait_min=5
+
+.PHONY: migrate-state
+migrate-state: ##@ Run terraform init -migrate-state.
+	terraform --version
+	terraform init -migrate-state \
+	  -backend-config=address=${TF_ADDRESS} \
+	  -backend-config=lock_address=${TF_ADDRESS}/lock \
+	  -backend-config=unlock_address=${TF_ADDRESS}/lock \
+	  -backend-config=username=${TF_USERNAME} \
+	  -backend-config=password=${TF_PASSWORD} \
+	  -backend-config=lock_method=POST \
+	  -backend-config=unlock_method=DELETE \
+	  -backend-config=retry_wait_min=5
 
 
 .PHONY: plan

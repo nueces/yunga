@@ -1,0 +1,142 @@
+# If there are changes in the infrastructure and playbooks, run the job in two different stages.
+# the infrastructure provisioning is made in the .pre stage that is always the first one before any other stage.
+# If there are changes in the infrastructure run the application jobs too.
+
+include: .gitlab-ci-terraform.yml  # Copied from https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/ci/templates/Terraform/Base.gitlab-ci.yml
+
+variables:
+  TF_AUTO_DEPLOY: "true"
+  TF_ROOT: infrastructure
+  TF_NAME: production
+  TF_INIT_FLAGS: -lockfile=readonly
+
+stages:
+  - validate
+  - build
+  - deploy:infrastructure
+  - deploy:applications
+  - cleanup
+
+##############################################################################
+# Infrastructure
+# When whe should trigger an infrastructure deployment
+
+.infrastructure: &infrastructure-configuration
+  environment: production
+  tags:
+    - terraform
+    - infrastructure
+  rules:
+    - changes:
+        - infrastructure/**/*
+
+##############################################################################
+# Applications deploy are basically the same, We only change the TIER and
+# path to watch for modifications
+
+.deploy-application:
+  stage: deploy:applications
+  environment: production
+  tags:
+    - ansible-pull
+    - application
+    - production
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push" || $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - infrastructure/**/*
+        - playbooks/$TIER.yml
+        - playbooks/roles/common/**/*
+        - playbooks/roles/$TIER/**/*
+  before_script:
+        - echo "Deploying $CI_COMMIT_BRANCH branch to $TIER; "commit $CI_COMMIT_SHA; job $CI_JOB_URL"
+  script:
+    - sudo -u ansible /home/ansible/venv/bin/ansible-pull --accept-host-key --clean \
+      --url="$CI_REPOSITORY_URL" \
+      --directory=/home/ansible/ansible-pull-ci \
+      --extra-vars='venv_bin_path=/home/ansible/venv/bin' \
+      playbooks/$TIER.yml
+
+
+##############################################################################
+## STAGE: validate
+
+terraform:fmt:
+  <<: *infrastructure-configuration
+  extends: .terraform:fmt
+  needs: []
+
+terraform:validate:
+  <<: *infrastructure-configuration
+  extends: .terraform:validate
+  needs: []
+
+
+##############################################################################
+## STAGE: build
+
+terraform:build:
+  <<: *infrastructure-configuration
+  extends: .terraform:build
+  environment:
+    name: $TF_STATE_NAME
+    action: prepare
+
+
+##############################################################################
+## STAGE: deploy-infrastructure
+
+terraform:deploy:
+  <<: *infrastructure-configuration
+  extends: .terraform:deploy
+  stage: deploy:infrastructure
+  dependencies:
+    - terraform:build
+  environment:
+    name: production
+    action: start
+  before_script:
+    - echo "Deploying $CI_COMMIT_BRANCH branch to build the infrastructure."
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $TF_AUTO_DEPLOY == "true"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == $CI_DEFAULT_BRANCH
+      changes:
+        - infrastructure/**/*
+
+
+##############################################################################
+## STAGE: deploy-applications
+
+# Application backend
+application:backend:deploy:
+  extends: .deploy-application
+  tags:
+    - ansible-pull
+    - application
+    - production
+    - backend
+  variables:
+    TIER: backend
+
+# Application frontend
+application:frontend:deploy:
+  extends: .deploy-application
+  tags:
+    - ansible-pull
+    - application
+    - production
+    - frontend
+  variables:
+    TIER: frontend
+
+
+##############################################################################
+## STAGE: cleanup
+
+terraform:destroy:
+  <<: *infrastructure-configuration
+  extends: .terraform:destroy
+  needs: []
+  when: manual

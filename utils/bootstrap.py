@@ -14,7 +14,7 @@ from botocore.exceptions import ClientError
 
 # Basic settings
 # file has to be present in the project root directory.
-# TODO: use argparse to get the configuration file as parameter.
+# FIXME: use argparse to get the configuration file as parameter.
 PROJECT_CONFIGURATION_FILE = "configuration.yml"
 
 TASK = os.path.splitext(os.path.basename(__file__))[0]
@@ -76,8 +76,8 @@ def create_bucket(bucket_name: str, region_name: str, enable_versioning: bool = 
                 LOGGER.info("Enabling versioning on bucket %s. Previous versioning status: %s", bucket_name, status)
                 try:
                     response = s3_client.put_bucket_versioning(
-                        Bucket=bucket_name,
-                        VersioningConfiguration={'Status': 'Enabled'})
+                        Bucket=bucket_name, VersioningConfiguration={"Status": "Enabled"}
+                    )
                 except ClientError as error:
                     LOGGER.error(error)
                     LOGGER.error(response)
@@ -102,10 +102,16 @@ def create_key_pair(keypair_name: str, parent_path: Path, region_name: str) -> b
     st_mode = parent_path.stat().st_mode
     # Check if a directory and with  permissions for reading, writing and execute only for the owner user.
     if st_mode != stat.S_IFDIR | stat.S_IRWXU:
-        LOGGER.warning("Current permissions for the vault directory '%s' are considered insecure '%s'",
-                       parent_path, stat.filemode(st_mode))
-        LOGGER.info("Updating permissions for the vault directory '%s' to '%s'",
-                    parent_path, stat.filemode(stat.S_IFDIR | stat.S_IRWXU))
+        LOGGER.warning(
+            "Current permissions for the vault directory '%s' are considered insecure '%s'",
+            parent_path,
+            stat.filemode(st_mode),
+        )
+        LOGGER.info(
+            "Updating permissions for the vault directory '%s' to '%s'",
+            parent_path,
+            stat.filemode(stat.S_IFDIR | stat.S_IRWXU),
+        )
         parent_path.chmod(stat.S_IFDIR | stat.S_IRWXU)
     try:
         response = ec2_client.create_key_pair(KeyName=keypair_name, KeyType="rsa", KeyFormat="pem")
@@ -126,7 +132,7 @@ def create_key_pair(keypair_name: str, parent_path: Path, region_name: str) -> b
             # Don't override the private key in case it exist. But create a backup of the existing file.
             backup_time = datetime.now().strftime("%Y%m%d-%H%M%S")
             backup_path = parent_path.joinpath(f"{keypair_name}.pem-{backup_time}.bck")
-            LOGGER.warning("key file '%s' already exist." % file_path)
+            LOGGER.warning("key file '%s' already exist.", file_path)
             LOGGER.info("Creating backup '%s'.", backup_path)
             file_path.rename(backup_path)
 
@@ -172,6 +178,8 @@ def main(project_basedir: Path, config_filename: str) -> int:
     """
     success = []
 
+    LOGGER.info("Starting task")
+
     # Configuration values
     with project_basedir.joinpath(config_filename).open("r") as fdc:
         config = yaml.safe_load(fdc)
@@ -197,12 +205,10 @@ def main(project_basedir: Path, config_filename: str) -> int:
     if not all(success):
         LOGGER.error("Some errors occurs during the bootstrap process, please review the logs for more details.")
 
+    LOGGER.info("Finish")
     # POSIX standard status code
     return 0 if all(success) else 1
 
 
 if __name__ == "__main__":
-    LOGGER.info("Starting task")
-    status_code = main(BASE_DIR, PROJECT_CONFIGURATION_FILE)
-    LOGGER.info("Finish")
-    sys.exit(status_code)
+    sys.exit(main(BASE_DIR, PROJECT_CONFIGURATION_FILE))

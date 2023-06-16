@@ -10,8 +10,8 @@
 
 
 # ansible_facts['device_links']['ids'].keys() that match with "$nvme[0-9]{1}n1$"
-#FIXME: Remove hardcoded values.
-- name:
+# FIXME: Remove hardcoded values.
+- name: Read NVM block
   ansible.builtin.command:
     cmd: /usr/sbin/ebsnvme-id -b /dev/nvme1n1
   register: ebsnvme_id
@@ -20,7 +20,7 @@
     - ebs_volume
 
 
-- name: Assert
+- name: Assert that nvm block is the same that we configured via terraform
   ansible.builtin.assert:
     that:
       - ebsnvme_id.stdout == "/dev/sdf"
@@ -29,7 +29,7 @@
     - ebs_volume
 
 
-#FIXME: This should be always the second volume.
+# FIXME: This should be always the second volume.
 - name: Create a new ext4 primary partition in the data volume
   community.general.parted:
     device: /dev/nvme1n1
@@ -43,7 +43,7 @@
 - name: Mount data volume
   ansible.posix.mount:
     path: /data
-    src:  /dev/nvme1n1
+    src: /dev/nvme1n1
     fstype: ext4
     opts: rw,auto
     state: present
@@ -70,8 +70,6 @@
   register: docker_creation
 
 
-- name: debug docker creation
+- name: Debug docker creation
   ansible.builtin.debug:
     var: docker_creation
-
-

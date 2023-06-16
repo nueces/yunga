@@ -6,6 +6,6 @@
     project_src: docker/frontend
   register: docker_creation
 
-- name: debug docker creation
+- name: Debug docker creation
   ansible.builtin.debug:
     var: docker_creation
