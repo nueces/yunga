@@ -1,4 +1,5 @@
 # Yunga
+A PoC for GitLab CI/CD, Terraform, and Ansible-pull for deploying AWS EC2 instances 
 
 ## Configuration
 The `configuration.yml` file contains a set of values that can be used to configure the `bootstrap` and `deployment` process.
@@ -16,7 +17,7 @@ data_device_name: /dev/sdf
 git:
   username: coati
   token_filename: deploy_token
-  repository_url: gitlab.com/jungle.ai/yunga.git
+  repository_url: gitlab.com/nueces/yunga.git
 
 # to be prefixed with the account_id and region ex: 123456789012-eu-central-1-terraform-backend-yunga
 terraform:
@@ -133,17 +134,16 @@ Usage: make <target>  [one or more targets separated by spaces and in the order 
 
 #### Database VM
 - Set the frontend/dashboard IP in the Prometheus configuration.
-- (Bonus) Use the RDMS database to store the state for the grafana service.
-- (Bonus) Backup the database to an S3 bucket (on daily schedule.)
+- Use the RDMS database to store the state for the grafana service.
+- Backup the database to an S3 bucket (on daily schedule.)
 
 #### Dashboard VM
 - A container running a dashboard service (Grafana or alike.)
-- (Bonus) A simple dashboard displaying the metrics collected by Prometheus + node-exporter.
+- A simple dashboard displaying the metrics collected by Prometheus + node-exporter.
 
 #### CI/CD
 - Configure a CI/CD pipeline using GitLab to lint the terraform configuration files and the configuration tool’s playbook.
-- (Bonus) Configure the CI/CD pipeline to configure the VMs on every commit pushed to the main branch.
-
+- Configure the EC2 instances as GitLab runners, so they update themself using ansible-pull.
 
 ### Can be improved:
 
